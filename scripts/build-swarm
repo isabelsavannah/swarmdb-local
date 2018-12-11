@@ -1,0 +1,9 @@
+set -e
+set -x
+
+mkdir -p build
+cd build
+
+cmake -DBOOST_ROOT:PATHNAME="/home/isabel/.install/boost_1_68_0" ..
+make -j 8
+ctest
