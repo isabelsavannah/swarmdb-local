@@ -1,0 +1,5 @@
+gnome-terminal -- bash -c "./build/output/swarm -c \"local/1.json\"; bash"
+gnome-terminal -- bash -c "./build/output/swarm -c \"local/2.json\"; bash"
+gnome-terminal -- bash -c "./build/output/swarm -c \"local/3.json\"; bash"
+gnome-terminal -- bash -c "./build/output/swarm -c \"local/4.json\"; bash"
+
