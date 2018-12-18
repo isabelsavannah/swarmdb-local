@@ -16,7 +16,7 @@ $create_chance = 0.1
 $delete_chance = 0.05
 $read_chance = 0.85
 
-$interval = 1
+$interval = 0.5
 $timeout = 10
 
 $base_port = 50000
@@ -60,18 +60,24 @@ def work(i)
   while true
     op = pick_operation(i)
     command = prefix + op.to_s
+    time_before = Time.now.to_f
     result, err = execute_operation(command)
+    latency = Time.now.to_f - time_before
 
-    if(err || !op.validate(result))
-      $stats_lock.synchronize {
-        $stats['errs'] ||= 0
-        $stats['errs'] += 1
-      }
-    else
-      op.apply
-    end
+    err ||= op.validate(result)
 
     $stats_lock.synchronize {
+      if err
+        $stats['errs'] ||= 0
+        $stats['errs'] += 1
+        $stats['err_counts'] ||= {}
+        $stats['err_counts'][err] ||= 0
+        $stats['err_counts'][err] += 1
+      else
+        op.apply
+        $stats['latency'] ||= []
+        $stats['latency'].push latency
+      end
       $stats['ops'] ||= 0
       $stats['ops'] += 1
     }
@@ -91,14 +97,75 @@ def execute_operation(command)
   end
 end
 
-def statistics(report_interval = 10)
+def statistics(report_interval = 30)
+  last_time = Time.now.to_f
   while true
-    $stats_lock.synchronize {
-      puts "#{($stats['ops'] || 0)} operations, #{$stats['errs'] || 0} errors"
-      puts "#{$state.size} uuids, #{$state.values.map{|x| x.size}.reduce(:+)} keys"
-      $stats = {}
-    }
     sleep(report_interval)
+    $stats_lock.synchronize {
+      interval = Time.now.to_f - last_time
+
+      puts 
+      puts "-"*40
+
+      puts "Ran for #{interval.to_f.round(2)} seconds"
+      
+      puts
+      ops = $stats['ops'] || 0
+      errs = $stats['errs'] || 0
+      err_rate = ops > 0 ? (100*errs/ops).round(0) : "--"
+      puts "Tried to execute #{ops} operations (#{(ops/interval).round(1)}/sec), #{errs} (#{err_rate}%) yielded an error"
+      if errs > 0
+        puts "  error breakdown:"
+        $stats['err_counts'].map do |name, amount|
+          puts "  #{amount} #{name}"
+        end
+      end
+
+      if $stats['latency'] && $stats['latency'].size > 0
+        puts
+        puts "Latency statistics for sucessful operations, in ms:"
+        data = $stats['latency'].sort
+        puts "  min:    " + (data[0]*1000).to_i.to_s
+        puts "  mean:   " + (data.reduce(0, :+)/data.length*1000).to_i.to_s
+        puts "  median: " + (median(data)*1000).to_i.to_s
+        puts "  p90:    " + (percentile(data, 0.9)*1000).to_i.to_s
+        puts "  p99:    " + (percentile(data, 0.99)*1000).to_i.to_s
+        puts "  max:    " + (data[-1]*1000).to_i.to_s
+      end
+
+
+      puts
+      puts "The database contains #{$state.size} uuids, with a total of #{$state.values.map{|x| x.size}.reduce(0, :+)} keys"
+
+      puts "-"*40
+      puts
+
+      $stats = {}
+      last_time = Time.now.to_f
+    }
+  end
+end
+
+def percentile(arr, p)
+  if arr.length == 1
+    return arr[0]
+  end
+
+  target = (arr.length - 1)*p
+
+  base = target.to_i
+  weight = target - target.to_i
+  
+  return arr[base] * (1-weight) + arr[base+1] * weight
+end
+
+
+
+def median(arr)
+  if arr.length % 2 == 0
+    (arr[arr.length/2] + arr[arr.length/2 - 1])/2
+  else
+    arr[arr.length/2]
   end
 end
 
@@ -125,7 +192,15 @@ class Read
   end
 
   def validate(response)
-    !response.include?("err") && response.include?($state[@uuid][@key])
+    if(response.include?("err"))
+     return "inferred-err"
+    end
+
+    if !response.include?($state[@uuid][@key])
+      return "wrong-value"
+    end
+
+    return nil
   end
 end
 
@@ -145,7 +220,11 @@ class Create
   end
   
   def validate(response)
-    !response.include? "error"
+    if(response.include?("err"))
+     return "inferred-err"
+    end
+
+    return nil
   end
 end
 
@@ -165,7 +244,11 @@ class Update
   end
   
   def validate(response)
-    !response.include? "error"
+    if(response.include?("err"))
+     return "inferred-err"
+    end
+
+    return nil
   end
 end
 
@@ -184,7 +267,11 @@ class Delete
   end
 
   def validate(response)
-    !response.include? "error"
+    if(response.include?("err"))
+     return "inferred-err"
+    end
+
+    return nil
   end
 end
 
@@ -202,7 +289,11 @@ class Create_db
   end
 
   def validate(response)
-    !response.include? "error"
+    if(response.include?("err"))
+     return "inferred-err"
+    end
+
+    return nil
   end
 end
 
