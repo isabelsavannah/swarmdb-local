@@ -22,6 +22,12 @@ $timeout = 10
 $base_port = 50000
 $nodes = 4
 
+$workers = 1
+$worker_start_interval = 5
+if ARGV.size > 0
+  $workers = ARGV[0].to_i
+end
+
 def rand_string(length)
   (0..length).map { (65 + rand(26)).chr }.join
 end
@@ -172,7 +178,10 @@ end
 def main
   threads = []
   threads.push Thread.new {statistics}
-  threads.push Thread.new {work 1}
+  (1..$workers).map do |i|
+    threads.push Thread.new {work i}
+    sleep($worker_start_interval)
+  end
 
   threads.map{|x| x.join}
 end
