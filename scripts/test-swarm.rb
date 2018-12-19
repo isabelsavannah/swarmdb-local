@@ -24,8 +24,24 @@ $nodes = 4
 
 $workers = 1
 $worker_start_interval = 5
+
+`mkdir -p local/logs/`
+$log_file = "local/logs/test-log-" + Time.now.to_i.to_s
+$log_lock = Mutex.new
+
 if ARGV.size > 0
   $workers = ARGV[0].to_i
+end
+
+def log(worker, string)
+  $log_lock.synchronize do
+    tag = "[w#{worker}|#{Time.now}] "
+    open($log_file, 'a') do |f|
+      string.split("\n").each do |line|
+        f.puts(tag + line)
+      end
+    end
+  end
 end
 
 def rand_string(length)
@@ -63,11 +79,23 @@ end
 
 def work(i)
   puts "Starting worker thread " + i.to_s
+  log(i, "starting")
   while true
     op = pick_operation(i)
     command = prefix + op.to_s
     time_before = Time.now.to_f
+
+    log(i, command)
+
     result, err = execute_operation(command)
+
+    log(i, result)
+    if err
+      log(i, "err: #{err}")
+    else
+      log(i, "no err")
+    end
+
     latency = Time.now.to_f - time_before
 
     err ||= op.validate(result)
