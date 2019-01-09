@@ -2,10 +2,10 @@
 
 require 'ruby_linear_regression'
 
-$delays = [0, 25, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000]
+$delays = [0, 25, 50, 75, 100, 150, 200, 300, 500]
 
-$prep = "./scripts/crud -p localhost:50000 create-db -u u"
-$command = "./scripts/crud -p localhost:50000 create -k k -v v -u u"
+$prep = "./scripts/crud -p -n localhost:50000 create-db -u u"
+$command = "./scripts/crud -p -n localhost:50000 create -k k -v v -u u"
 
 $results = {}
 
@@ -18,9 +18,11 @@ $delays.each do |delay|
     `#{$command}`
     finish = Time.now
 
-    $results[delay/1000.0] = finish - start
+    diff = finish - start
 
-    puts "#{delay}ms network latency: #{(finish - start).round(2)}s operation latency"
+    $results[delay/1000.0] = diff
+
+    puts "#{delay}ms network latency: #{(diff).round(2)}s operation latency (#{(diff/(delay/1000.0)).round(2)})"
   ensure
     `tc qdisc del dev lo root netem delay #{delay}ms`
   end
