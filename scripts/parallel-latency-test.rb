@@ -7,7 +7,7 @@ $threads = 6
 $latency = 100 #ms
 
 def pick_operation
-  return "./scripts/crud -p -n localhost:5000#{rand(4)} create-db -u \"someuuid#{rand(10000)}\""
+  return "./scripts/crud -n localhost:5000#{rand(4)} create-db -u \"someuuid#{rand(10000)}\""
 end
 
 def work(i)
