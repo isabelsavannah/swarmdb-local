@@ -33,6 +33,10 @@ if ARGV.size > 0
   $workers = ARGV[0].to_i
 end
 
+if ARGV.size > 1
+  $nodes = ARGV[1].to_i
+end
+
 def log(worker, string)
   $log_lock.synchronize do
     tag = "[w#{worker}|#{Time.now}] "
@@ -74,7 +78,7 @@ def pick_operation(id)
 end
 
 def prefix
-  "./scripts/crud -n localhost:#{$base_port + rand($nodes)} -p "
+  "./scripts/crud -n localhost:#{$base_port + rand($nodes)} "
 end
 
 def work(i)

@@ -6,6 +6,8 @@ else
   $swarm_size = 4
 end
 
+debug = false
+
 `rm -rf local/nodes/`
 base_dir = `pwd`.strip
 peers_file = base_dir + "/local/nodes/peers.json"
@@ -49,14 +51,21 @@ execute_commands = []
     "audit_enabled": true,
     "chaos_testing_enabled": false,
     "monitor_address": "localhost",
-    "monitor_port": 8125
+    "monitor_port": 8125,
+    "crypto_enabled_incoming": false,
+    "crypto_enabled_outgoing": true
     }))
 
-  execute_commands.push %(gnome-terminal -- bash -c "cd #{node_dir}; #{node_dir}/swarm -c #{node_dir}/bluzelle.json; bash")
+  pid = `lsof -t -i:#{50000+i}`
+  if pid.length > 0
+    execute_commands.push "kill #{pid}"
+  end
+  execute_commands.push %(gnome-terminal -- bash -c "cd #{node_dir}; #{debug ? "gdb -ex run --args" : ""} #{node_dir}/swarm -c #{node_dir}/bluzelle.json; bash")
 end
 
 File.write(peers_file, '[' + peers.join(",\n") + ']')
 
 execute_commands.each do |command|
+  puts command
   `#{command}`
 end

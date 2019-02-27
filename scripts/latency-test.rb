@@ -4,8 +4,8 @@ require 'ruby_linear_regression'
 
 $delays = [0, 25, 50, 75, 100, 150, 200, 300, 500]
 
-$prep = "./scripts/crud -p -n localhost:50000 create-db -u u"
-$command = "./scripts/crud -p -n localhost:50000 create -k k -v v -u u"
+$prep = "./scripts/crud -n localhost:50000 create-db -u u"
+$command = "./scripts/crud -n localhost:50000 create -k k -v v -u u"
 
 $results = {}
 
