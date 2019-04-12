@@ -6,7 +6,7 @@ else
   $swarm_size = 4
 end
 
-debug = false
+debug = true
 
 `rm -rf local/nodes/`
 base_dir = `pwd`.strip
@@ -53,7 +53,8 @@ execute_commands = []
     "monitor_address": "localhost",
     "monitor_port": 8125,
     "crypto_enabled_incoming": false,
-    "crypto_enabled_outgoing": true
+    "crypto_enabled_outgoing": true,
+    "ws_idle_timeout": 2000
     }))
 
   pid = `lsof -t -i:#{50000+i}`
